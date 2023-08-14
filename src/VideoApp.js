@@ -1,159 +1,131 @@
 import React, { useState, useEffect } from 'react';
+import '../index.css'; // Make sure to import your CSS file
+// import MainJS from './main.js'; // Make sure to import your JavaScript file
 
-import './videoapp.css'; // Make sure to adjust the path to your CSS file
+const VideoApp = () => {
+    const [username, setUsername] = useState('');
+    const [connected, setConnected] = useState(false);
+    const [btn,setBTN] = useState(false);
+    const [input, setInput] = useState(true);
+    const [mapPeers, useMapPeers] = useState({});
+    const [ws,setWs] = useState(null);
+    const [localStream, setLocalStream] = useState(null);
+    const [audioEnabled, setAudioEnabled] = useState(true);
+    const [videoEnabled, setVideoEnabled] = useState(true);
 
-function VideoApp() {
-  const [username, setUsername] = useState('');
-  const [webSocket, setWebSocket] = useState(null);
-  const [localStream, setLocalStream] = useState(new MediaStream());
+    useEffect(() => {
+        const constraints = {
+          audio: true,
+          video: true,
+        };
+    
+        navigator.mediaDevices
+          .getUserMedia(constraints)
+          .then((stream) => {
+            setLocalStream(stream);
+    
+            const audioTrack = stream.getAudioTracks()[0];
+            const videoTrack = stream.getVideoTracks()[0];
+    
+            audioTrack.enabled = true;
+            videoTrack.enabled = true;
+          })
+          .catch((error) => {
+            console.log('Error: ', error);
+          });
+      }, []);
 
-  useEffect(() => {
-    // Initialize WebSocket connection
-    if (webSocket === null) {
-      const loc = window.location;
-      const wsstart = loc.protocol === 'https:' ? 'wss://' : 'ws://';
-      const endpoint = `${wsstart}${loc.host}${loc.pathname}`;
-
-      const socket = new WebSocket(endpoint);
-      setWebSocket(socket);
-
-      socket.addEventListener('open', () => {
-        console.log('Connection opened');
-        sendSignal('new-peer', {});
-      });
-
-      socket.addEventListener('message', webSocketOnMessage);
-
-      socket.addEventListener('close', () => {
-        console.log('Connection closed');
-      });
-
-      socket.addEventListener('error', () => {
-        console.log('Error occurred');
-      });
-    }
-
-    // Get user media
-    const constraints = {
-      audio: true,
-      video: true,
+    const toggleAudio = () => {
+    setAudioEnabled(!audioEnabled);
+    localStream.getAudioTracks()[0].enabled = !audioEnabled;
     };
 
-    navigator.mediaDevices
-      .getUserMedia(constraints)
-      .then((stream) => {
-        setLocalStream(stream);
-      })
-      .catch((error) => {
-        console.log('Error: ', error);
-      });
-  }, [webSocket]);
+    const toggleVideo = () => {
+    setVideoEnabled(!videoEnabled);
+    localStream.getVideoTracks()[0].enabled = !videoEnabled;
+    };
 
-  const webSocketOnMessage = (event) => {
-    const parsedData = JSON.parse(event.data);
-    const peerUsername = parsedData.peer;
-    const action = parsedData.action;
+    const handleStart = (e) => {
+        e.preventDefault();
+        setBTN(true)
+        setConnected(true);
+    
+        const loc = window.location;
+        const wsStart = loc.protocol === 'https:' ? 'wss://' : 'ws://';
+        const endpoint = `${wsStart}${loc.host}${loc.pathname}`;
+        const newWebSocket = new WebSocket(endpoint);
+    
+        newWebSocket.addEventListener('open', () => {
+          sendSignal('new-peer', {});
+        });
+    
+        newWebSocket.addEventListener('message', (event) => {
+          handleWebSocketMessage(event);
+        });
+    
+        newWebSocket.addEventListener('close', () => {
+          setConnected(false);
+        });
+    
+        newWebSocket.addEventListener('error', () => {
+          console.log('Error Occurred');
+        });
+    
+        setWs(newWebSocket);
+      };
+    
+    const handleWebSocketMessage = (event) => {
+        const parsedData = JSON.parse(event.data);
+        const peerUsername = parsedData['peer'];
+        const action = parsedData['action'];
+    
+        // Rest of your message handling logic...
+        console.log(action);
+      };
+    
+      const sendSignal = (action, message) => {
+        if (!ws) {
+          return;
+        }
+    
+        const jsonStr = JSON.stringify({
+          'peer': username,
+          'action': action,
+          'message': message,
+        });
+    
+        ws.send(jsonStr);
+      };
 
-    // Rest of your logic for handling WebSocket messages
-    // ...
-
-    console.log('Action:', action);
-  };
-
-  const sendSignal = (action, message) => {
-    const jsonStr = JSON.stringify({
-      peer: username,
-      action: action,
-      message: message,
-    });
-
-    if (webSocket !== null) {
-      webSocket.send(jsonStr);
-    }
-  };
-
-  return (
-    <div className="App">
-      <h3 id="label-username">{username || 'Username'}</h3>
-
-      {!username ? (
-        <div>
-          <input
-            id="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <button
-            id="btn-join"
-            onClick={() => {
-              if (username === '') {
-                return;
-              }
-
-              const usernameInput = document.querySelector('#username');
-              const btnJoin = document.querySelector('#btn-join');
-
-              usernameInput.disabled = true;
-              btnJoin.disabled = true;
-
-              // Rest of your logic for joining the room
-              // ...
-
-              setUsername('');
-            }}
-          >
-            Join Room
-          </button>
-        </div>
-      ) : (
-        <div className="main-grid-container">
-          <div id="video-container">
-            <div>
-              <video
-                id="local-video"
-                style={{ float: 'left' }}
-                autoPlay
-                playsInline
-                muted
-              />
-            </div>
-            {/* Rest of your local video controls */}
-            {/* ... */}
-          </div>
-
-          <div id="chat">
-            <h3>Chat</h3>
-            <div id="message">
-              <ul id="mess-list">{/* Display chat messages here */}</ul>
-            </div>
+    return (
+        <>
+            <h1>{username}</h1>
+            {input ? (
+                <form onSubmit={handleStart}>
+                    <input
+                        type='text'
+                        required
+                        autoFocus
+                        value={username}
+                        onChange={e => setUsername(e.target.value)}
+                    />
+                    <button type='submit'>Start</button>
+                </form>
+            ) : (
+                null
+            )}
 
             <div>
-              <input id="msg" />
-              <button
-                id="send-mess"
-                onClick={() => {
-                  // Send chat message logic
-                  // ...
-                }}
-              >
-                Send message
-              </button>
+                <video id="local-video" autoPlay muted playsInline />
+                <button id="btn-toggle-audio" onClick={toggleAudio}>
+                    {audioEnabled ? 'Audio mute' : 'Audio unmute'}
+                </button>
+                <button id="btn-toggle-video" onClick={toggleVideo}>
+                    {videoEnabled ? 'Video mute' : 'Video unmute'}
+                </button>
             </div>
-
-            <button
-              id="btm-share-screen"
-              onClick={() => {
-                // Share screen logic
-                // ...
-              }}
-            >
-              Share Screen
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+        </>
+    );
+};
 
 export default VideoApp;
