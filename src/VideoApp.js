@@ -180,13 +180,15 @@ const VideoApp = () => {
     console.log(peerUsername, receiver_channel_name);
 
     const peer = new RTCPeerConnection(null);
-    addLocalTracks(peer, localStream);
+    addLocalTracks(peer);
+    const remoteVideo = createVideo(peerUsername)
     try {
       const localStream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true,
       });
       await addMapPeers(peer, localStream, peerUsername);
+      setOnTracks(peer,remoteVideo,localStream)
     } catch (error) {
       console.error("Error getting user media:", error);
     }
@@ -229,40 +231,50 @@ const VideoApp = () => {
       });
   };
 
-  const addLocalTracks = (peer, localStream1) => {
-    try {
+  const addLocalTracks = (peer) => {
       localStream.getTracks().forEach((track) => {
         peer.addTrack(track, localStream);
       });
-      peer.addEventListener("track",(event) => {
-        console.log("track");
-        localStream1.addTrack(event.track, localStream1);
-      });
-    } catch (error) {
-      console.log("track error -=)>");
-      console.log(error);
-    }
   };
 
-  const setOnTracks = (peer, remoteVideo) => {
-    const remoteStream = new MediaStream();
-    remoteVideo.srcObject = remoteStream;
-    peer.addEventListener("track", async (event) => {
-      remoteStream.addTrack(event.track, remoteStream);
-      console.log("track : ", event.track, remoteStream);
+  const createVideo = (peerUsername) =>{  
+    const videoContainer = document.querySelector('#video-container');
+
+    var remoteVideo = document.createElement('video')
+    remoteVideo.id = peerUsername+'-video';
+    remoteVideo.autoplay=true;
+    remoteVideo.playsInline=true;
+
+    const videowrapper = document.createElement('div')
+
+    videoContainer.appendChild(videowrapper)
+
+    videowrapper.appendChild(remoteVideo)
+
+    return remoteVideo;
+
+  }
+
+  const setOnTracks = (peer, remoteVideo,stream) => {
+    remoteVideo.srcObject = stream;
+    peer.addEventListener("track", (event) => {
+      stream.addTrack(event.track, stream);
+      console.log("track : ", event.track, stream);
     });
   };
 
   const createAnswerer = async (offer, peerUsername, receiver_channel_name) => {
     const peer = new RTCPeerConnection(null);
-
+    addLocalTracks(peer);
+    const remoteVideo = createVideo(peerUsername);
     try {
       const localStream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true,
       });
       await addMapPeers(peer, localStream, peerUsername);
-      addLocalTracks(peer, localStream);
+      // addLocalTracks(peer, localStream);
+      setOnTracks(peer,remoteVideo,localStream)
     } catch (error) {
       console.error("Error getting user media:", error);
     }
@@ -336,6 +348,8 @@ const VideoApp = () => {
         <button id="btn-toggle-video" onClick={toggleVideo}>
           {videoEnabled ? "Video mute" : "Video unmute"}
         </button>
+      </div>
+      <div id='video-container'>
       </div>
     </>
   );
