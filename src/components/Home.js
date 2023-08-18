@@ -11,7 +11,9 @@ const Home = () => {
     const navigate = useNavigate();
     useEffect(() => {
         const getUserData = async () => {
+            console.log(auth.access)
             try {
+                console.log(auth.access)
                 const response = await api.get('/auth/users/me/', {
                     withCredentials: true,
                     headers: {
@@ -22,27 +24,27 @@ const Home = () => {
                 setLoading(false); // Mark loading as done
             } catch (error) {
                 console.log(error);
-                setLoading(true); // Mark loading as done even on error
+                setLoading(false);
+                // navigate('/') // Mark loading as done even on error
             }
         };
 
         if (auth.access) {
             getUserData();
         }
-        else{
-            setLoading(true)
-            navigate('/admin')
+        
+        // else{
+        //     navigate('/')
+        // }
+        // getUserData();
+        const goToHome = ()=>{
+            navigate('/')
         }
 
-    }, [auth.access],[]);
+        
+    },[auth.access]);
 
-    const goToStartPage = async() =>{
-        navigate('/')
-    }
 
-    const logout = () =>{
-
-    }
     return (
         <div>
             {loading ? (
@@ -51,6 +53,7 @@ const Home = () => {
                 <><h1>Hello {userData.username}</h1><Logout /></>
             ) : (
                 <p>No user data available</p>
+                
             )}
 
            

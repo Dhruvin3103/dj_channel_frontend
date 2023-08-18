@@ -9,6 +9,7 @@ export const AuthProvider = ({ children }) => {
     const [cookies, setCookie, removeCookie] = useCookies(['access', 'refresh']);
 
     useEffect(() => {
+        console.log(cookies)
         const savedAccess = cookies.access;
         const savedRefresh = cookies.refresh;
 
@@ -20,10 +21,11 @@ export const AuthProvider = ({ children }) => {
     const saveTokensToCookies = (access, refresh) => {
         setCookie('access', access, { path: '/' });
         setCookie('refresh', refresh, { path: '/' });
-        // console.log(cookies.access)
+        console.log(cookies)
     };
 
     const clearTokensFromCookies = () => {
+        console.log("cleare")
         removeCookie('access');
         removeCookie('refresh');
     };
