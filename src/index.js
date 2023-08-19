@@ -12,7 +12,6 @@ ReactDOM.render(
       <Router>
         <Routes>
           <Route path='*' element={<App />} />
-          <Route path='/videochat/*' element={<VideoApp />} />
         </Routes>
       </Router>
     </AuthProvider>
