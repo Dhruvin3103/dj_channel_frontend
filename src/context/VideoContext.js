@@ -5,11 +5,8 @@ const VideoContext = createContext({});
 export const VideoProvider = ({ children }) => {
   const backendurl = "127.0.0.1:8000/";
   const pathname = "chat/";
-  const localVideoRef = useRef(null);
-  const videoContainerRef = useRef(null);
   const [username, setUsername] = useState("");
   const [connected, setConnected] = useState(false);
-  const [btn, setBTN] = useState(false);
   const [input, setInput] = useState(true);
   const [mapPeers, setMapPeers] = useState({});
   const [ws, setWs] = useState(null);
@@ -17,32 +14,6 @@ export const VideoProvider = ({ children }) => {
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [videoEnabled, setVideoEnabled] = useState(true);
   const videoRef = useRef(null);
-
-  // video element
-//   useEffect(() => {
-//     const constraints = {
-//       audio: true,
-//       video: true,
-//     };
-
-//     navigator.mediaDevices
-//       .getUserMedia(constraints)
-//       .then((stream) => {
-//         console.log("video elemtt");
-//         setLocalStream(stream);
-//         const audioTrack = stream.getAudioTracks()[0];
-//         const videoTrack = stream.getVideoTracks()[0];
-//         audioTrack.enabled = true;
-//         videoTrack.enabled = true;
-//         if (videoRef.current) {
-//           videoRef.current.srcObject = stream;
-//           videoRef.current.muted = true; // Display the stream in the video element
-//         }
-//       })
-//       .catch((error) => {
-//         console.log("Error: ", error);
-//       });
-//   }, []);
 
   const toggleAudio = () => {
     setAudioEnabled(!audioEnabled);
@@ -77,14 +48,13 @@ export const VideoProvider = ({ children }) => {
     }
   }, [ws]); // Effect will run whenever 'ws' changes
 
-  const handleStart = (e) => {
-    e.preventDefault();
-    setInput(true);
-    setConnected(true);
-
+  const handleStart = (lobby_name) => {
+    setInput(false);
     const loc = window.location;
+    const ws_url = "ws/";
     const wsStart = loc.protocol === "https:" ? "wss://" : "ws://";
-    const endpoint = `${wsStart}${backendurl}${pathname}`;
+    const endpoint = `${wsStart}${backendurl}ws/${lobby_name}/`;
+    console.log(endpoint)
     const newWebSocket = new WebSocket(endpoint);
     setWs(newWebSocket);
   };
@@ -283,15 +253,20 @@ export const VideoProvider = ({ children }) => {
   const createVideo = (peerUsername) => {
     const videoContainer = document.querySelector("#video-container");
 
-    var remoteVideo = document.createElement("video");
+    const remoteVideo = document.createElement("video");
+    const h1_username = document.createElement("h1");
+
     remoteVideo.id = peerUsername + "-video";
     remoteVideo.autoplay = true;
     remoteVideo.playsInline = true;
+    h1_username.textContent = peerUsername;
+
 
     const videowrapper = document.createElement("div");
 
     videoContainer.appendChild(videowrapper);
 
+    videowrapper.appendChild(h1_username);
     videowrapper.appendChild(remoteVideo);
 
     return remoteVideo;
@@ -325,7 +300,7 @@ export const VideoProvider = ({ children }) => {
         setAudioEnabled,
         videoEnabled,
         setVideoEnabled,
-        setLocalStream
+        setLocalStream,
       }}
     >
       {children}

@@ -14,7 +14,7 @@ function App() {
         <Route exact path='/signup' element={<Register/>}/>
         <Route exact path='/login' element={<Login/>}/>
         <Route exact path='/home' element={<Home/>}/>
-        <Route exact path='/videochat' element={<VideoApp/>}/>
+        <Route path='/videochat/:id' element={<VideoApp/>}/>
       </Routes>   
       </VideoProvider>
     </main>
