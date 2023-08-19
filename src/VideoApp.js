@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useContext } from "react";
 import "./videoapp.css"; // Make sure to import your CSS file
 import VideoContext from "./context/VideoContext";
 import { useParams } from "react-router-dom";
-
+import AuthContext from "./context/AuthProvider";
 const VideoApp = ({}) => {
   const {
     handleStart,
@@ -16,10 +16,15 @@ const VideoApp = ({}) => {
     setAudioEnabled,
     videoEnabled,
     setVideoEnabled,
-    setLocalStream
-  } = useContext(VideoContext)
+    setLocalStream,
+  } = useContext(VideoContext);
+
+  const { userData } = useContext(AuthContext);
 
   const { id } = useParams();
+
+  useEffect(() => {});
+
   useEffect(() => {
     const constraints = {
       audio: true,
@@ -43,20 +48,23 @@ const VideoApp = ({}) => {
       .catch((error) => {
         console.log("Error: ", error);
       });
+     
+    setUsername(userData.username);
   }, []);
 
   return (
     <>
-      <h1>{username}</h1>
+      {userData ? <h1>{userData.username}</h1> : null}
+
       {input ? (
-        <form onSubmit={()=>handleStart(id)}>
-          <input
+        <form onSubmit={() => handleStart(id,userData.username)}>
+          {/* <input
             type="text"
             required
             autoFocus
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-          />
+          /> */}
           <button type="submit">Start</button>
         </form>
       ) : null}

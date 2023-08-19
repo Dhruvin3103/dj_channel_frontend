@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { useAuth } from "../context/AuthProvider";
+import React, { useContext, useEffect, useState } from "react";
+import AuthContext, { useAuth } from "../context/AuthProvider";
 import api from "../api/axios";
 import { useNavigate,Link } from "react-router-dom";
 import Logout from "./Logout";
@@ -7,34 +7,9 @@ import VideoApp from "../VideoApp";
 
 const Home = () => {
   const { auth } = useAuth();
-  const [userData, setUserData] = useState(null);
   const [lobbyName, setLobbyName] = useState('');
-  const [loading, setLoading] = useState(true); // Add loading state
   const navigate = useNavigate();
-  useEffect(() => {
-    const getUserData = async () => {
-      console.log(auth.access);
-      try {
-        console.log(auth.access);
-        const response = await api.get("/auth/users/me/", {
-          withCredentials: true,
-          headers: {
-            Authorization: `Bearer ${auth.access}`,
-          },
-        });
-        setUserData(response.data);
-        setLoading(false); // Mark loading as done
-      } catch (error) {
-        console.log(error);
-        setLoading(false);
-      }
-    };
-
-    if (auth.access) {
-      getUserData();
-    }
-  }, [auth.access]);
-
+  const {userData,loading} = useContext(AuthContext)
   const handleSubmit =()=>{
 
   }

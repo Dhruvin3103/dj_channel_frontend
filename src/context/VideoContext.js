@@ -48,12 +48,12 @@ export const VideoProvider = ({ children }) => {
     }
   }, [ws]); // Effect will run whenever 'ws' changes
 
-  const handleStart = (lobby_name) => {
+  const handleStart = (lobby_name,username) => {
     setInput(false);
     const loc = window.location;
     const ws_url = "ws/";
     const wsStart = loc.protocol === "https:" ? "wss://" : "ws://";
-    const endpoint = `${wsStart}${backendurl}ws/${lobby_name}/`;
+    const endpoint = `${wsStart}${backendurl}ws/${lobby_name}/${username}`;
     console.log(endpoint)
     const newWebSocket = new WebSocket(endpoint);
     setWs(newWebSocket);
