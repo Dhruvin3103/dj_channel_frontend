@@ -13,6 +13,7 @@ export const VideoProvider = ({ children }) => {
   const [localStream, setLocalStream] = useState();
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [videoEnabled, setVideoEnabled] = useState(true);
+  const [err,SetErr] = useState('');
   const videoRef = useRef(null);
 
   const toggleAudio = () => {
@@ -33,6 +34,11 @@ export const VideoProvider = ({ children }) => {
       });
 
       ws.addEventListener("message", (event) => {
+        const message = JSON.parse(event.data)['message']
+        const status = JSON.parse(event.data)['status']
+        if (status===404 && message === 'Room does not exist'){
+          SetErr('Room Does Not Exist')
+        }
         console.log("ws messages");
         handleWebSocketMessage(event);
       });
@@ -40,9 +46,11 @@ export const VideoProvider = ({ children }) => {
       ws.addEventListener("close", () => {
         console.log("ws closes");
         setConnected(false);
+        setInput(true);
       });
 
-      ws.addEventListener("error", () => {
+      ws.addEventListener("error", (event) => {
+        console.log(event)
         console.log("Error Occurred");
       });
     }
@@ -301,6 +309,7 @@ export const VideoProvider = ({ children }) => {
         videoEnabled,
         setVideoEnabled,
         setLocalStream,
+        err,SetErr
       }}
     >
       {children}
