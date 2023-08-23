@@ -13,7 +13,9 @@ export const VideoProvider = ({ children }) => {
   const [localStream, setLocalStream] = useState();
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [videoEnabled, setVideoEnabled] = useState(true);
-  const [err,SetErr] = useState('');
+  const [err, setErr] = useState("");
+  const [disBtn, setDisBtn] = useState(false);
+  const [userPeer,setUserPeer] = useState({});
   const videoRef = useRef(null);
 
   const toggleAudio = () => {
@@ -26,6 +28,7 @@ export const VideoProvider = ({ children }) => {
     localStream.getVideoTracks()[0].enabled = !videoEnabled;
   };
 
+
   useEffect(() => {
     if (ws) {
       ws.addEventListener("open", () => {
@@ -34,10 +37,10 @@ export const VideoProvider = ({ children }) => {
       });
 
       ws.addEventListener("message", (event) => {
-        const message = JSON.parse(event.data)['message']
-        const status = JSON.parse(event.data)['status']
-        if (status===404 && message === 'Room does not exist'){
-          SetErr('Room Does Not Exist')
+        const message = JSON.parse(event.data)["message"];
+        const status = JSON.parse(event.data)["status"];
+        if (status === 404 && message === "Room does not exist") {
+          setErr("Room Does Not Exist");
         }
         console.log("ws messages");
         handleWebSocketMessage(event);
@@ -50,19 +53,20 @@ export const VideoProvider = ({ children }) => {
       });
 
       ws.addEventListener("error", (event) => {
-        console.log(event)
+        console.log(event);
         console.log("Error Occurred");
       });
     }
   }, [ws]); // Effect will run whenever 'ws' changes
 
-  const handleStart = (lobby_name,username) => {
+  const handleStart = (lobby_name, username) => {
     setInput(false);
+    setDisBtn(true);
     const loc = window.location;
     const ws_url = "ws/";
     const wsStart = loc.protocol === "https:" ? "wss://" : "ws://";
     const endpoint = `${wsStart}${backendurl}ws/${lobby_name}/${username}`;
-    console.log(endpoint)
+    console.log(endpoint);
     const newWebSocket = new WebSocket(endpoint);
     setWs(newWebSocket);
   };
@@ -73,8 +77,14 @@ export const VideoProvider = ({ children }) => {
     const peerUsername = parsedData["peer"];
     const message = parsedData["message"];
     const action = parsedData["action"];
+    const peerObj = parsedData["mapPeers"];
+    const updatedMapPeers = {...peerObj,...mapPeers}
+    console.log(updatedMapPeers)
+    // setMapPeers(updatedMapPeers)
     console.log(action);
     if (username === peerUsername) {
+      console.log('added to object')
+      
       return;
     }
     const receiver_channel_name =
@@ -96,8 +106,12 @@ export const VideoProvider = ({ children }) => {
     if (action === "new-answer") {
       console.log("new answer");
       const answer = parsedData["message"]["sdp"];
+      // const peer = mapPeers[peerUsername][0];
+      // peer.setRemoteDescription(answer)
+      console.log('out setmap peers', mapPeers);
       setMapPeers((prevMapPeers) => {
         const updatedMapPeers = { ...prevMapPeers };
+        console.log('inside ', updatedMapPeers);
         const peer = updatedMapPeers[peerUsername][0];
         if (
           peer.signalingState === "have-local-offer" ||
@@ -122,6 +136,7 @@ export const VideoProvider = ({ children }) => {
           );
         }
       });
+      console.log('after', mapPeers);
     }
 
     console.log("mess : " + message);
@@ -138,18 +153,25 @@ export const VideoProvider = ({ children }) => {
       peer: username,
       action: action,
       message: message,
+      mapPeers:mapPeers
     });
     // console.log(jsonStr)
     ws.send(jsonStr);
   };
 
+  useEffect(() => {
+    console.log('mapPeers has been updated:', mapPeers);
+    // You can perform additional actions here with the updated mapPeers
+  }, [mapPeers]);
+
   const addMapPeers = async (peer, localStream, peerUsername) => {
-    console.log(peerUsername);
+    
     const updatedMapPeers = {
       ...mapPeers,
       [peerUsername]: [peer, localStream],
     };
     setMapPeers(updatedMapPeers);
+    console.log('added : ',updatedMapPeers,mapPeers);
   };
 
   const createOfferer = async (peerUsername, receiver_channel_name) => {
@@ -157,6 +179,7 @@ export const VideoProvider = ({ children }) => {
     console.log(peerUsername, receiver_channel_name);
 
     const peer = new RTCPeerConnection(null);
+    setUserPeer(peer);
     addLocalTracks(peer);
     const remoteVideo = createVideo(peerUsername);
     await addMapPeers(peer, localStream, peerUsername);
@@ -164,6 +187,7 @@ export const VideoProvider = ({ children }) => {
     console.log(mapPeers);
     peer.addEventListener("iceconnectionstatechange", () => {
       const iceConnectionState = peer.iceConnectionState;
+      console.log('changed');
       if (
         iceConnectionState === "failed" ||
         iceConnectionState === "disconnected" ||
@@ -172,8 +196,10 @@ export const VideoProvider = ({ children }) => {
         if (iceConnectionState !== "closed") {
           peer.close();
         }
+
         const updatedMapPeers = { ...mapPeers };
         delete updatedMapPeers[peerUsername];
+        console.log('updated obj : ',updatedMapPeers);
         setMapPeers(updatedMapPeers);
         removeVideo(remoteVideo);
       }
@@ -203,12 +229,14 @@ export const VideoProvider = ({ children }) => {
 
   const createAnswerer = async (offer, peerUsername, receiver_channel_name) => {
     const peer = new RTCPeerConnection(null);
+    setUserPeer(peer);
     addLocalTracks(peer);
     const remoteVideo = createVideo(peerUsername);
     await addMapPeers(peer, localStream, peerUsername);
     setOnTracks(peer, remoteVideo);
     console.log(mapPeers);
     peer.addEventListener("iceconnectionstatechange", () => {
+      console.log('changed');
       const iceConnectionState = peer.iceConnectionState;
       if (
         iceConnectionState === "failed" ||
@@ -220,6 +248,7 @@ export const VideoProvider = ({ children }) => {
         }
         const updatedMapPeers = { ...mapPeers };
         delete updatedMapPeers[peerUsername];
+        console.log('updated obj : ',updatedMapPeers);
         setMapPeers(updatedMapPeers);
         removeVideo(remoteVideo);
       }
@@ -269,7 +298,6 @@ export const VideoProvider = ({ children }) => {
     remoteVideo.playsInline = true;
     h1_username.textContent = peerUsername;
 
-
     const videowrapper = document.createElement("div");
 
     videoContainer.appendChild(videowrapper);
@@ -281,6 +309,7 @@ export const VideoProvider = ({ children }) => {
   };
 
   const removeVideo = (video) => {
+    console.log(video)
     const videowrapper = video.parentNode;
     videowrapper.parentNode.removeChild(videowrapper);
   };
@@ -294,6 +323,29 @@ export const VideoProvider = ({ children }) => {
     });
   };
 
+  const disconnectVideo = (username) => {
+    console.log(userPeer)
+    const updatedMapPeers = { ...mapPeers };
+    delete updatedMapPeers[username];
+    const remoteVideo = document.getElementById("video-container");
+    const videoElements = remoteVideo.querySelectorAll('video');
+    try {
+      userPeer.close();
+    } catch (error) {
+      console.log(error)
+    }
+    
+    videoElements.forEach(videoElement =>{
+      removeVideo(videoElement)
+    })
+    console.log(remoteVideo);
+    window.location.reload();
+    // console.log('updated obj : ',updatedMapPeers);
+    // setMapPeers(updatedMapPeers);
+    // removeVideo(remoteVideo);
+    
+    // peer.close();
+  };
   return (
     <VideoContext.Provider
       value={{
@@ -309,7 +361,12 @@ export const VideoProvider = ({ children }) => {
         videoEnabled,
         setVideoEnabled,
         setLocalStream,
-        err,SetErr
+        err,
+        setErr,
+        disconnectVideo,
+        disBtn,
+        setDisBtn,
+        mapPeers
       }}
     >
       {children}

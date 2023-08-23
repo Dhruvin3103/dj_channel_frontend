@@ -5,31 +5,70 @@ import { useNavigate, Link } from "react-router-dom";
 import Logout from "./Logout";
 import VideoApp from "../VideoApp";
 import generateUniqueCode from "./GenerateUniqueCode";
+import axios from "../api/axios";
 
 const Home = () => {
   const { auth } = useAuth();
-  const [lobbyName, setLobbyName] = useState("");
-  const navigate = useNavigate();
   const { userData, loading } = useContext(AuthContext);
+  const [lobbyName, setLobbyName] = useState("");
+  const [err, setErr] = useState("");
+  const navigate = useNavigate();
 
-  const handleSubmitJoin = (e) => {
-    e.preventDefault(); // Prevent the form from submitting by default
-
+  const handleSubmitJoin = async (lobby_code) => {
     if (lobbyName.trim() === "") {
-      // Check if the lobbyName is empty or contains only whitespace
       alert("Lobby name cannot be empty");
     } else {
-      // Proceed with your form submission logic
-      // You can navigate to the desired URL or perform other actions here
-      navigate(`/videochat/${lobbyName}`);
+      const formData = new FormData();
+      formData.append("lobby_id", lobby_code);
+      try {
+        const response = await axios.post("/chat/lobbycheck/", formData, {
+          withCredentials: true,
+        });
+        navigate(`/videochat/${lobbyName}`);
+        console.log("pass", response);
+      } catch (error) {
+        if (error.response) {
+          const { status, data } = error.response;
+          console.log(status);
+          if (status === 404) {
+            setErr(data.error);
+          }
+        } else {
+          setErr("An Error Occured");
+          console.log(error);
+        }
+      }
     }
   };
 
-  const handleSubmitCreate =() =>{
-    console.log('create')
+  const handleSubmitCreate = async () => {
+    console.log("create");
     const code = generateUniqueCode();
-    console.log(code)
-  }
+    const formData = new FormData();
+    formData.append("lobby_id", code);
+    try {
+      const response = await axios.post("/chat/lobby/", formData, {
+        withCredentials: true,
+      });
+      if (response.data["message"] === "Go ahead") {
+        setTimeout(() => {
+          navigate(`/videochat/${code}`);
+        }, 0);
+      }
+    } catch (error) {
+      if (error.response) {
+        const { status, data } = error.response;
+        console.log(status);
+        if (status === 400) {
+          setErr(data.errors);
+        }
+      } else {
+        setErr("An Error Occured");
+        console.log(error);
+      }
+    }
+    console.log(code);
+  };
 
   return (
     <div>
@@ -37,6 +76,7 @@ const Home = () => {
         <p>Loading...</p>
       ) : userData ? (
         <>
+          {err ? <p>{err}</p> : null}
           <h1>Hello {userData.username}</h1>
           <Logout />
           {/* <form onSubmit={handleSubmit}> */}
@@ -55,7 +95,7 @@ const Home = () => {
             onChange={(e) => setLobbyName(e.target.value)}
             value={lobbyName}
           />
-          <button type="submit" onClick={handleSubmitJoin}>
+          <button type="submit" onClick={() => handleSubmitJoin(lobbyName)}>
             Join
           </button>
           {/* </form> */}

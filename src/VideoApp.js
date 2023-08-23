@@ -4,6 +4,8 @@ import VideoContext from "./context/VideoContext";
 import { useParams } from "react-router-dom";
 import AuthContext from "./context/AuthProvider";
 import Errorpage from "./components/Errorpage";
+import axios from "./api/axios";
+import { useNavigate } from "react-router-dom";
 const VideoApp = ({}) => {
   const {
     handleStart,
@@ -19,12 +21,35 @@ const VideoApp = ({}) => {
     setVideoEnabled,
     setLocalStream,
     err,
+    setErr,
+    disBtn,
+    setDisBtn,
+    disconnectVideo,
+    mapPeers
   } = useContext(VideoContext);
 
   const { userData, loading } = useContext(AuthContext);
   const [name, setName] = useState("");
   const { id } = useParams();
 
+  useEffect(() => {
+    const disconnectOnUnload = (event) => {
+      // Prompt the user to confirm leaving the page
+      event.preventDefault();
+      event.returnValue = '';
+      console.log('hello disconnect')
+      // Disconnect from the video chat (you should replace this with your actual disconnection logic)
+      disconnectVideo(username);
+    };
+
+    window.addEventListener('beforeunload', disconnectOnUnload);
+
+    return () => {
+      // Remove the event listener when the component is unmounted
+      window.removeEventListener('beforeunload', disconnectOnUnload);
+    };
+  }, []);
+  
   useEffect(() => {
     const constraints = {
       audio: true,
@@ -60,6 +85,33 @@ const VideoApp = ({}) => {
     }
   }, []);
 
+  useEffect(() => {
+    const checkParam = async () => {
+      setErr("");
+      const formData = new FormData();
+      console.log(id);
+      formData.append("lobby_id", id);
+      try {
+        const response = await axios.post("/chat/lobbycheck/", formData, {
+          withCredentials: true,
+        });
+        console.log("pass", response);
+      } catch (error) {
+        if (error.response) {
+          const { status, data } = error.response;
+          console.log(status);
+          if (status === 404) {
+            setErr(data.error);
+          }
+        } else {
+          setErr("An Error Occured");
+          console.log(error);
+        }
+      }
+    };
+
+    checkParam();
+  }, []);
   return (
     <>
       {err ? (
@@ -87,6 +139,9 @@ const VideoApp = ({}) => {
                 </button>
               </div>
               <div id="video-container"></div>
+              {disBtn?(<button onClick={()=>disconnectVideo(userData.username)}>
+                disconnect
+              </button>):null}
             </>
           ) : (
             <p>kuch to gadbad hai !! </p>
